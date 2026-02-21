@@ -1,6 +1,6 @@
 {
-  "name": "Alptekin-Not Şifre",
-  "short_name": "AlpKasa",
+  "name": "Alptekin-passNot",
+  "short_name": "Alptekin",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
