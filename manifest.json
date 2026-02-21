@@ -1,7 +1,7 @@
 {
   "name": "Alptekin-passNot",
   "short_name": "Alptekin",
-  "start_url": "/",
+  "start_url": "/np/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
