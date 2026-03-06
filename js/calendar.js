@@ -437,14 +437,6 @@ const CalendarApp = {
             await DBManager.save("vaultItems", { id: idToSave, encryptedBlob: encResult.ciphertext, iv: encResult.iv, createdAt: nowIso, updatedAt: nowIso });
             await window.reloadVaultData(); 
             this.closeForms();
-            // --- YENİ EKLENEN KISIM: ICS ÇIKTISI SORMA ---
-            setTimeout(() => {
-                if (confirm("Uygulama kapalıyken de bildirim almak için bu kaydı telefonun sistem takvimine (.ics) indirmek ister misiniz?")) {
-                    plainData.id = idToSave; // UID oluşturmak için ID'yi datanın içine atıyoruz
-                    this.exportToICS(plainData);
-                 }
-            }, 500);
-            // --------------------------------------------
         } catch (e) { alert("Kaydedilirken hata oluştu!"); }
     },
 
@@ -633,70 +625,5 @@ const CalendarApp = {
                 }
             });
         }, 5000); 
-    },
-
-    // --- YENİ: ICS (iCalendar) DIŞA AKTARIM SİSTEMİ ---
-    exportToICS(item) {
-        let dtStart, dtEnd, summary, description, valarmStr = "";
-        const now = new Date();
-        const stamp = this.formatICSDate(now);
-
-        if (item.calType === 'alarm') {
-            // Alarm Mantığı
-            summary = item.label || "Alarm";
-            description = "AlpKasa Alarmı";
-            
-            const [hours, mins] = item.time.split(':');
-            let alarmDate = new Date();
-            alarmDate.setHours(parseInt(hours), parseInt(mins), 0, 0);
-            if (alarmDate < now) alarmDate.setDate(alarmDate.getDate() + 1); // Bugün geçtiyse yarına kur
-            
-            dtStart = this.formatICSDate(alarmDate);
-            dtEnd = this.formatICSDate(new Date(alarmDate.getTime() + 15 * 60000)); // 15 Dk varsayılan süre
-
-            // Alarmın çaldığı günleri (0:Paz, 1:Pzt...) iCal formatına çevir
-            if (item.days && item.days.length > 0) {
-                const dayMap = {"0":"SU", "1":"MO", "2":"TU", "3":"WE", "4":"TH", "5":"FR", "6":"SA"};
-                const rruleDays = item.days.map(d => dayMap[d]).join(",");
-                valarmStr = `RRULE:FREQ=WEEKLY;BYDAY=${rruleDays}\n`;
-            }
-            // Tam saatinde bildirim
-            valarmStr += `BEGIN:VALARM\nTRIGGER:-PT0M\nACTION:DISPLAY\nDESCRIPTION:AlpKasa Alarm\nEND:VALARM\n`;
-
-        } else {
-            // Etkinlik ve Anımsatıcı Mantığı
-            summary = item.title || "Etkinlik";
-            description = item.note ? item.note.replace(/\n/g, "\\n") : "";
-            dtStart = this.formatICSDate(new Date(item.start));
-            dtEnd = this.formatICSDate(new Date(item.end));
-
-            // Tekrarlama (RRULE)
-            if (item.repeat && item.repeat !== 'none') {
-                const freqMap = { 'daily': 'DAILY', 'weekly': 'WEEKLY', 'biweekly': 'WEEKLY;INTERVAL=2', 'monthly': 'MONTHLY', 'yearly': 'YEARLY' };
-                valarmStr += `RRULE:FREQ=${freqMap[item.repeat]}\n`;
-            }
-            // Uyarı Süresi (VALARM)
-            if (item.alert && item.alert !== "-1") {
-                valarmStr += `BEGIN:VALARM\nTRIGGER:-PT${item.alert}M\nACTION:DISPLAY\nDESCRIPTION:Hatırlatıcı\nEND:VALARM\n`;
-            }
-        }
-
-        const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//AlpKasa//TR\nBEGIN:VEVENT\nUID:${item.id}@alpkasa.app\nDTSTAMP:${stamp}\nDTSTART:${dtStart}\nDTEND:${dtEnd}\nSUMMARY:${summary}\nDESCRIPTION:${description}\n${valarmStr}END:VEVENT\nEND:VCALENDAR`;
-
-        // Dosyayı Cihaza İndirme / Gönderme
-        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `${summary.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    },
-
-    formatICSDate(date) {
-        const pad = (n) => n.toString().padStart(2, '0');
-        return date.getUTCFullYear() + pad(date.getUTCMonth() + 1) + pad(date.getUTCDate()) + 'T' + 
-                pad(date.getUTCHours()) + pad(date.getUTCMinutes()) + pad(date.getUTCSeconds()) + 'Z';
     }
-
 };
